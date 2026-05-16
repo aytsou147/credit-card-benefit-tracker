@@ -26,7 +26,7 @@ https://credit-card-benefit-tracker-seven.vercel.app
 ## Setup
 
 ### 1. Create a Supabase project
-
+9
 Go to [supabase.com](https://supabase.com) and create a free project.
 
 ### 2. Run the migration
