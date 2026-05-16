@@ -81,7 +81,7 @@ export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueB
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0">
-          {!benefit.is_auto_used && !isFullyUsed && (
+          {!benefit.is_auto_used && (
             <Button
               variant="outline"
               size="sm"

@@ -31,29 +31,30 @@ interface LogUsageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (benefitId: string, amount: number, periodStart: string, notes: string) => void;
+  initialPeriodStart?: string;
 }
 
-export function LogUsageDialog({ benefit, open, onOpenChange, onSubmit }: LogUsageDialogProps) {
+export function LogUsageDialog({ benefit, open, onOpenChange, onSubmit, initialPeriodStart }: LogUsageDialogProps) {
   const [amount, setAmount] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (benefit && open) {
-      const current = getCurrentPeriod(benefit.period_type);
-      const key = periodStartKey(current.start);
+      const key = initialPeriodStart ?? periodStartKey(getCurrentPeriod(benefit.period_type).start);
       setPeriodStart(key);
 
       if (benefit.credit_type === 'perk') {
         setAmount('1');
       } else {
-        const used = getUsageForPeriod(benefit.usage_logs, current.start);
+        const periodDate = new Date(key + 'T00:00:00');
+        const used = getUsageForPeriod(benefit.usage_logs, periodDate);
         const remaining = benefit.credit_amount - used;
         setAmount(remaining > 0 ? remaining.toFixed(2) : benefit.credit_amount.toFixed(2));
       }
       setNotes('');
     }
-  }, [benefit, open]);
+  }, [benefit, open, initialPeriodStart]);
 
   if (!benefit) return null;
 

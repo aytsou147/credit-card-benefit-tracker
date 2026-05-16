@@ -6,15 +6,19 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { CardWithBenefits } from '@/lib/types';
-import { getAllPeriodsForYear, getUsageForPeriod, periodTypeLabel } from '@/lib/periods';
+import { CardWithBenefits, BenefitWithUsage } from '@/lib/types';
+import { getAllPeriodsForYear, getUsageForPeriod, periodStartKey, periodTypeLabel } from '@/lib/periods';
 
 interface HistoryTableProps {
   cards: CardWithBenefits[];
   year: number;
+  editMode?: boolean;
+  onCellClick?: (benefit: BenefitWithUsage, periodStart: string) => void;
 }
 
-export function HistoryTable({ cards, year }: HistoryTableProps) {
+const now = new Date();
+
+export function HistoryTable({ cards, year, editMode, onCellClick }: HistoryTableProps) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   function toggleCard(cardId: string) {
@@ -39,7 +43,7 @@ export function HistoryTable({ cards, year }: HistoryTableProps) {
           const periods = getAllPeriodsForYear(benefit.period_type, year);
           for (const p of periods) {
             cardTotalAvailable += benefit.credit_amount;
-            const used = benefit.is_auto_used
+            const used = benefit.is_auto_used && p.start <= now
               ? benefit.credit_amount
               : getUsageForPeriod(benefit.usage_logs, p.start);
             cardTotalUsed += Math.min(used, benefit.credit_amount);
@@ -92,7 +96,7 @@ export function HistoryTable({ cards, year }: HistoryTableProps) {
                     if (isDollar) {
                       for (const p of periods) {
                         benefitTotal += benefit.credit_amount;
-                        const used = benefit.is_auto_used
+                        const used = benefit.is_auto_used && p.start <= now
                           ? benefit.credit_amount
                           : getUsageForPeriod(benefit.usage_logs, p.start);
                         benefitUsed += Math.min(used, benefit.credit_amount);
@@ -121,24 +125,28 @@ export function HistoryTable({ cards, year }: HistoryTableProps) {
                         {isDollar && <Progress value={benefitPct} className="h-1.5 mb-2" />}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 text-xs">
                           {periods.map((p) => {
-                            const used = benefit.is_auto_used
+                            const used = benefit.is_auto_used && p.start <= now
                               ? (isDollar ? benefit.credit_amount : 1)
                               : getUsageForPeriod(benefit.usage_logs, p.start);
                             const isUsed = isDollar
                               ? used >= benefit.credit_amount
                               : used > 0;
                             const partial = isDollar && used > 0 && used < benefit.credit_amount;
+                            const clickable = editMode && !benefit.is_auto_used && onCellClick;
 
                             return (
-                              <div
+                              <button
                                 key={p.label}
+                                type="button"
+                                disabled={!clickable}
+                                onClick={() => clickable && onCellClick(benefit, periodStartKey(p.start))}
                                 className={`rounded px-2 py-1 text-center ${
                                   isUsed
                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                     : partial
                                     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                     : 'bg-muted text-muted-foreground'
-                                }`}
+                                } ${clickable ? 'cursor-pointer ring-offset-background hover:ring-2 hover:ring-ring hover:ring-offset-1 transition-shadow' : ''}`}
                               >
                                 <div className="font-medium">{p.label}</div>
                                 {isDollar && (
@@ -147,7 +155,7 @@ export function HistoryTable({ cards, year }: HistoryTableProps) {
                                 {!isDollar && (
                                   <div>{isUsed ? 'Used' : '—'}</div>
                                 )}
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
