@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { CreditCard, History, LogOut } from 'lucide-react';
+import { Clock, CreditCard, History, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Nav() {
@@ -21,6 +21,7 @@ export function Nav() {
 
   const links = [
     { href: '/', label: 'Dashboard', icon: CreditCard },
+    { href: '/due', label: 'Due', icon: Clock },
     { href: '/history', label: 'History', icon: History },
   ];
 
