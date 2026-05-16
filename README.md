@@ -11,6 +11,7 @@ https://credit-card-benefit-tracker-seven.vercel.app
 - Add credit cards from pre-built templates (Amex Platinum, Gold, Hilton Aspire, Chase Sapphire Reserve/Preferred, Chase Hyatt, Atmos Summit) or create custom cards
 - Track dollar credits and perks (free nights, companion awards, etc.)
 - Log usage for current or past periods (monthly, quarterly, semi-annual, annual, one-time)
+- **Due page** — see all benefits expiring soon across every card in one list, filterable by month, quarter, half, or year, with inline usage logging
 - Mark recurring benefits as "auto-used" (e.g. subscriptions)
 - Set reminders for credits expiring soon (visual + browser notifications)
 - View cumulative year-over-year usage history
@@ -18,8 +19,8 @@ https://credit-card-benefit-tracker-seven.vercel.app
 
 ## Tech Stack
 
-- **Next.js 14** (App Router) + TypeScript
-- **Tailwind CSS** + shadcn/ui
+- **Next.js 16** (App Router) + React 19 + TypeScript
+- **Tailwind CSS 4** + shadcn/ui
 - **Supabase** (Auth + Postgres + Row-Level Security)
 
 ## Setup
