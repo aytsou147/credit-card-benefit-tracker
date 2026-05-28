@@ -64,7 +64,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     ],
   },
   {
-    name: 'Chase Hyatt',
+    name: 'World of Hyatt',
     issuer: 'Chase',
     annual_fee: 95,
     color: '#1A1F71',
@@ -74,7 +74,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     ],
   },
   {
-    name: 'Atmos Summit',
+    name: 'Atmos Rewards Summit',
     issuer: 'Bank of America',
     annual_fee: 395,
     color: '#2E7D32',
@@ -89,7 +89,8 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     annual_fee: 95,
     color: '#0D47A1',
     benefits: [
-      { name: 'Hotel Credit', description: '$50/year', credit_type: 'dollar', credit_amount: 50, period_type: 'annual', is_auto_used: false },
+      { name: 'Hotel Credit', description: '$50/year in Chase Travel', credit_type: 'dollar', credit_amount: 50, period_type: 'annual', is_auto_used: false },
+      { name: 'DoorDash', description: '$10 x2 non-restaurant + $5 restaurant per month', credit_type: 'dollar', credit_amount: 25, period_type: 'monthly', is_auto_used: false },
     ],
   },
   {
@@ -98,12 +99,13 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     annual_fee: 550,
     color: '#1A237E',
     benefits: [
-      { name: 'The Edit', description: '$250/year, min 2-night stay via Chase Travel', credit_type: 'dollar', credit_amount: 250, period_type: 'semi_annual', is_auto_used: false },
+      { name: 'The Edit', description: '$500/year, 2 x $250 credits, min 2-night stay via Chase Travel', credit_type: 'dollar', credit_amount: 500, period_type: 'annual', is_auto_used: false },
+      { name: 'Chase Travel Partner Hotel', description: '$250/years, min 2-night stay via Chase Travel at IHG, Montages, Pendry, Omni, Virgin, Minor, and Pan Pacific', credit_type: 'dollar', credit_amount: 250, period_type: 'annual', is_auto_used: false },
       { name: 'Travel', description: '$300/year', credit_type: 'dollar', credit_amount: 300, period_type: 'annual', is_auto_used: false },
       { name: 'Dining', description: '$150/half year, OpenTable (only certain restaurants)', credit_type: 'dollar', credit_amount: 150, period_type: 'semi_annual', is_auto_used: false },
       { name: 'StubHub & Viagogo', description: '$150/half year', credit_type: 'dollar', credit_amount: 150, period_type: 'semi_annual', is_auto_used: false },
       { name: 'DoorDash', description: '$10 x2 non-restaurant + $5 restaurant per month', credit_type: 'dollar', credit_amount: 25, period_type: 'monthly', is_auto_used: false },
-      { name: 'Apple TV & Music', description: '$12.99/month, until 6/22/2027', credit_type: 'dollar', credit_amount: 288, period_type: 'monthly', is_auto_used: false },
+      { name: 'Apple TV & Music', description: '$12.99/month, until 6/22/2027', credit_type: 'dollar', credit_amount: 13, period_type: 'monthly', is_auto_used: false },
       { name: 'Global Entry / TSA PreCheck / Nexus', description: 'Resets every 4 years', credit_type: 'dollar', credit_amount: 120, period_type: 'annual', is_auto_used: false },
       { name: 'Peloton', description: '$10/month membership credit', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
       { name: 'Lyft', description: '$10/month in-app credit', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
