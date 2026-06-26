@@ -20,7 +20,8 @@ interface DueBenefitRowProps {
 }
 
 export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueBenefitRowProps) {
-  const period = getCurrentPeriod(benefit.period_type);
+  const anchor = benefit.cycle_start_date;
+  const period = getCurrentPeriod(benefit.period_type, anchor);
   const used = benefit.is_auto_used
     ? benefit.credit_amount
     : getUsageForPeriod(benefit.usage_logs, period.start);
@@ -32,7 +33,7 @@ export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueB
   const isFullyUsed = isDollar
     ? used >= benefit.credit_amount
     : used > 0;
-  const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type) : null;
+  const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type, anchor) : null;
 
   return (
     <div className={`rounded-lg border p-4 transition-colors ${isFullyUsed ? 'opacity-60' : ''}`}>

@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2, ChevronRight, Zap, Bell } from 'lucide-react';
 import { CardWithBenefits } from '@/lib/types';
-import { getCurrentPeriod, getUsageForPeriod, periodTypeLabel } from '@/lib/periods';
+import { getCurrentPeriod, getUsageForPeriod } from '@/lib/periods';
+import { rewardCategoriesForCard } from '@/lib/card-templates';
 
 interface CardTileProps {
   card: CardWithBenefits;
@@ -32,7 +33,7 @@ export function CardTile({ card, onDelete }: CardTileProps) {
   let totalAvailable = 0;
   let totalUsed = 0;
   for (const b of dollarBenefits) {
-    const period = getCurrentPeriod(b.period_type);
+    const period = getCurrentPeriod(b.period_type, b.cycle_start_date);
     const used = b.is_auto_used
       ? b.credit_amount
       : getUsageForPeriod(b.usage_logs, period.start);
@@ -43,6 +44,7 @@ export function CardTile({ card, onDelete }: CardTileProps) {
   const pct = totalAvailable > 0 ? (totalUsed / totalAvailable) * 100 : 0;
   const hasReminders = card.benefits.some((b) => b.reminder_enabled);
   const hasAutoUsed = card.benefits.some((b) => b.is_auto_used);
+  const rewardCategories = rewardCategoriesForCard(card);
 
   return (
     <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
@@ -106,23 +108,15 @@ export function CardTile({ card, onDelete }: CardTileProps) {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {card.benefits.slice(0, 4).map((b) => (
-            <Badge key={b.id} variant="secondary" className="text-xs">
-              {b.name}
-              {b.credit_type === 'dollar' && (
-                <span className="ml-1 opacity-70">
-                  ${b.credit_amount}
-                </span>
-              )}
-            </Badge>
-          ))}
-          {card.benefits.length > 4 && (
-            <Badge variant="outline" className="text-xs">
-              +{card.benefits.length - 4} more
-            </Badge>
-          )}
-        </div>
+        {rewardCategories.length > 0 && (
+          <div className="mb-3 space-y-0.5">
+            {rewardCategories.map((category, i) => (
+              <div key={i} className="text-sm">
+                {category}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

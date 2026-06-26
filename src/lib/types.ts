@@ -1,5 +1,6 @@
 export type PeriodType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'one_time';
 export type CreditType = 'dollar' | 'perk';
+export type BenefitSource = 'template' | 'custom';
 
 export interface Card {
   id: string;
@@ -8,6 +9,7 @@ export interface Card {
   issuer: string;
   annual_fee: number;
   color: string;
+  template_key: string | null;
   created_at: string;
 }
 
@@ -22,6 +24,12 @@ export interface Benefit {
   is_auto_used: boolean;
   reminder_enabled: boolean;
   reminder_days_before: number;
+  // Stable key tying this row to its template benefit (null for custom benefits).
+  benefit_key: string | null;
+  source: BenefitSource;
+  // Per-user anniversary anchor for annual benefits that reset on a card date
+  // rather than the calendar year. Null = calendar year.
+  cycle_start_date: string | null;
   created_at: string;
 }
 

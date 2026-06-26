@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -15,11 +16,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, Zap, Bell, BellOff, Check, PlusCircle } from 'lucide-react';
-import { BenefitWithUsage } from '@/lib/types';
+import { Trash2, Zap, Bell, BellOff, Check, PlusCircle, Pencil } from 'lucide-react';
+import { BenefitWithUsage, UsageLog } from '@/lib/types';
 import {
   getCurrentPeriod,
   getUsageForPeriod,
+  periodStartKey,
   periodTypeLabel,
   daysUntilPeriodEnd,
 } from '@/lib/periods';
@@ -30,6 +32,10 @@ interface BenefitRowProps {
   onToggleAutoUsed: (benefitId: string, value: boolean) => void;
   onToggleReminder: (benefitId: string, enabled: boolean) => void;
   onDelete: (benefitId: string) => void;
+  onEdit?: (benefit: BenefitWithUsage) => void;
+  onSetCycleDate?: (benefitId: string, date: string | null) => void;
+  onEditUsage?: (benefit: BenefitWithUsage, log: UsageLog) => void;
+  onDeleteUsage?: (logId: string) => void;
 }
 
 export function BenefitRow({
@@ -38,8 +44,14 @@ export function BenefitRow({
   onToggleAutoUsed,
   onToggleReminder,
   onDelete,
+  onEdit,
+  onSetCycleDate,
+  onEditUsage,
+  onDeleteUsage,
 }: BenefitRowProps) {
-  const period = getCurrentPeriod(benefit.period_type);
+  const anchor = benefit.cycle_start_date;
+  const period = getCurrentPeriod(benefit.period_type, anchor);
+  const periodKey = periodStartKey(period.start);
   const used = benefit.is_auto_used
     ? benefit.credit_amount
     : getUsageForPeriod(benefit.usage_logs, period.start);
@@ -51,7 +63,14 @@ export function BenefitRow({
   const isFullyUsed = isDollar
     ? used >= benefit.credit_amount
     : used > 0;
-  const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type) : null;
+  const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type, anchor) : null;
+  const isCustom = benefit.source === 'custom';
+
+  const periodLogs = benefit.is_auto_used
+    ? []
+    : benefit.usage_logs
+        .filter((l) => l.period_start === periodKey)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
   return (
     <div className="rounded-lg border p-4">
@@ -84,29 +103,43 @@ export function BenefitRow({
               size="icon"
               className="h-8 w-8"
               onClick={() => onLogUsage(benefit)}
+              title="Log usage"
             >
               <PlusCircle className="h-4 w-4" />
             </Button>
           )}
-          <AlertDialog>
-            <AlertDialogTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {benefit.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This removes the benefit and all its usage history.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(benefit.id)}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {isCustom && onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onEdit(benefit)}
+              title="Edit benefit"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {isCustom && (
+            <AlertDialog>
+              <AlertDialogTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {benefit.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes the benefit and all its usage history.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(benefit.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
@@ -128,7 +161,47 @@ export function BenefitRow({
         </div>
       )}
 
-      <div className="flex items-center gap-4 text-sm">
+      {periodLogs.length > 0 && (
+        <div className="mb-3 space-y-1">
+          {periodLogs.map((log) => (
+            <div key={log.id} className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs">
+              <span className="font-medium">
+                {isDollar ? `$${Number(log.amount_used).toFixed(2)}` : 'Used'}
+              </span>
+              <span className="text-muted-foreground">
+                {new Date(log.created_at).toLocaleDateString()}
+              </span>
+              {log.notes && (
+                <span className="text-muted-foreground truncate">· {log.notes}</span>
+              )}
+              <div className="ml-auto flex items-center gap-0.5 shrink-0">
+                {onEditUsage && (
+                  <button
+                    type="button"
+                    className="rounded p-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => onEditUsage(benefit, log)}
+                    title="Edit entry"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+                {onDeleteUsage && (
+                  <button
+                    type="button"
+                    className="rounded p-1 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDeleteUsage(log.id)}
+                    title="Delete entry"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-4 text-sm flex-wrap">
         <label className="flex items-center gap-2 cursor-pointer">
           <Switch
             checked={benefit.is_auto_used}
@@ -148,6 +221,17 @@ export function BenefitRow({
           )}
           <span>{benefit.reminder_enabled ? 'Reminder on' : 'Reminder off'}</span>
         </button>
+        {benefit.period_type === 'annual' && onSetCycleDate && (
+          <label className="flex items-center gap-1.5 text-muted-foreground" title="Anniversary reset date (leave blank for calendar year)">
+            <span>Anniversary</span>
+            <Input
+              type="date"
+              value={benefit.cycle_start_date ?? ''}
+              onChange={(e) => onSetCycleDate(benefit.id, e.target.value || null)}
+              className="h-7 w-auto px-2 py-1 text-xs"
+            />
+          </label>
+        )}
         {daysLeft !== null && (
           <span className="ml-auto text-xs text-muted-foreground">
             {daysLeft}d left in period

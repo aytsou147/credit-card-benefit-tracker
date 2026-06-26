@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,55 +21,93 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
-import { CreditType, PeriodType } from '@/lib/types';
+import { BenefitWithUsage, CreditType, PeriodType } from '@/lib/types';
 
-interface AddBenefitDialogProps {
-  onAdd: (benefit: {
-    name: string;
-    description: string;
-    credit_type: CreditType;
-    credit_amount: number;
-    period_type: PeriodType;
-    is_auto_used: boolean;
-  }) => void;
+export interface BenefitFields {
+  name: string;
+  description: string;
+  credit_type: CreditType;
+  credit_amount: number;
+  period_type: PeriodType;
+  is_auto_used: boolean;
+  cycle_start_date: string | null;
 }
 
-export function AddBenefitDialog({ onAdd }: AddBenefitDialogProps) {
-  const [open, setOpen] = useState(false);
+interface AddBenefitDialogProps {
+  onAdd: (benefit: BenefitFields) => void;
+  // Edit mode: pass the benefit plus controlled open state and onSave.
+  benefit?: BenefitWithUsage | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSave?: (benefitId: string, benefit: BenefitFields) => void;
+}
+
+export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange, onSave }: AddBenefitDialogProps) {
+  const isEdit = !!benefit;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isEdit ? openProp ?? false : internalOpen;
+  const setOpen = isEdit ? onOpenChange ?? (() => {}) : setInternalOpen;
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creditType, setCreditType] = useState<CreditType>('dollar');
   const [amount, setAmount] = useState('');
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
   const [isAutoUsed, setIsAutoUsed] = useState(false);
+  const [cycleStartDate, setCycleStartDate] = useState('');
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  // Seed the form from the benefit when the (parent-controlled) edit dialog opens.
+  useEffect(() => {
+    if (isEdit && open && benefit) {
+      setName(benefit.name);
+      setDescription(benefit.description ?? '');
+      setCreditType(benefit.credit_type);
+      setAmount(benefit.credit_amount ? String(benefit.credit_amount) : '');
+      setPeriodType(benefit.period_type);
+      setIsAutoUsed(benefit.is_auto_used);
+      setCycleStartDate(benefit.cycle_start_date ?? '');
+    }
+  }, [isEdit, open, benefit]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onAdd({
+    const fields: BenefitFields = {
       name,
       description,
       credit_type: creditType,
       credit_amount: creditType === 'dollar' ? parseFloat(amount) || 0 : 0,
       period_type: periodType,
       is_auto_used: isAutoUsed,
-    });
-    setName('');
-    setDescription('');
-    setCreditType('dollar');
-    setAmount('');
-    setPeriodType('monthly');
-    setIsAutoUsed(false);
+      cycle_start_date: periodType === 'annual' ? cycleStartDate || null : null,
+    };
+
+    if (isEdit && benefit && onSave) {
+      onSave(benefit.id, fields);
+    } else {
+      onAdd(fields);
+      setName('');
+      setDescription('');
+      setCreditType('dollar');
+      setAmount('');
+      setPeriodType('monthly');
+      setIsAutoUsed(false);
+      setCycleStartDate('');
+    }
     setOpen(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" className="gap-2" />}>
-        <Plus className="h-4 w-4" /> Add Benefit
-      </DialogTrigger>
+      {!isEdit && (
+        <DialogTrigger render={<Button variant="outline" className="gap-2" />}>
+          <Plus className="h-4 w-4" /> Add Benefit
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Benefit</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit Benefit' : 'Add Benefit'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -136,11 +174,25 @@ export function AddBenefitDialog({ onAdd }: AddBenefitDialogProps) {
               />
             </div>
           )}
+          {periodType === 'annual' && (
+            <div className="space-y-2">
+              <Label htmlFor="benefit-cycle">Anniversary date (optional)</Label>
+              <Input
+                id="benefit-cycle"
+                type="date"
+                value={cycleStartDate}
+                onChange={(e) => setCycleStartDate(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to reset on the calendar year (Jan 1). Set a date to reset on that anniversary instead.
+              </p>
+            </div>
+          )}
           <label className="flex items-center gap-2 cursor-pointer">
             <Switch checked={isAutoUsed} onCheckedChange={setIsAutoUsed} />
             <span className="text-sm">Automatically used each period (e.g. subscription)</span>
           </label>
-          <Button type="submit" className="w-full">Add Benefit</Button>
+          <Button type="submit" className="w-full">{isEdit ? 'Save Changes' : 'Add Benefit'}</Button>
         </form>
       </DialogContent>
     </Dialog>

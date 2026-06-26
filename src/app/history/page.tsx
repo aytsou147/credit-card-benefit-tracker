@@ -81,7 +81,7 @@ export default function HistoryPage() {
   for (const card of cards) {
     for (const benefit of card.benefits) {
       if (benefit.credit_type !== 'dollar') continue;
-      const periods = getAllPeriodsForYear(benefit.period_type, year);
+      const periods = getAllPeriodsForYear(benefit.period_type, year, benefit.cycle_start_date);
       for (const p of periods) {
         grandTotalAvailable += benefit.credit_amount;
         const now = new Date();

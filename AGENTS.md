@@ -39,18 +39,19 @@ src/
 ├── components/
 │   ├── ui/                   # shadcn primitives (Button, Badge, Dialog, Select, etc.)
 │   ├── nav.tsx               # Top nav bar with route links
-│   ├── card-tile.tsx          # Dashboard card summary tile
-│   ├── benefit-row.tsx        # Full benefit row (card detail page)
+│   ├── card-tile.tsx          # Dashboard card summary tile (credits bar + earning categories)
+│   ├── benefit-row.tsx        # Full benefit row + usage-entry list (card detail page)
 │   ├── due-benefit-row.tsx    # Compact benefit row with card context (due page)
-│   ├── log-usage-dialog.tsx   # Reusable dialog for logging benefit usage
+│   ├── log-usage-dialog.tsx   # Reusable dialog for logging/editing benefit usage
 │   ├── add-card-dialog.tsx    # Add card from template or custom
-│   ├── add-benefit-dialog.tsx # Add benefit to a card
+│   ├── add-benefit-dialog.tsx # Add/edit a benefit (edit mode for custom benefits)
 │   ├── history-table.tsx      # Expandable year history grid
 │   └── reminder-badge.tsx     # Expiration reminders + browser notifications
 ├── lib/
 │   ├── types.ts              # Core types: Card, Benefit, UsageLog, CardWithBenefits
-│   ├── periods.ts            # Period math: boundaries, labels, usage lookups
-│   ├── card-templates.ts     # Pre-built card templates (Amex, Chase, etc.)
+│   ├── periods.ts            # Period math: boundaries, labels, usage lookups (anchor-aware)
+│   ├── card-templates.ts     # Pre-built card templates (keys, reward categories, helpers)
+│   ├── template-sync.ts      # Reconcile template-bound benefit rows with template code
 │   ├── utils.ts              # cn() utility
 │   └── supabase/
 │       ├── client.ts         # Browser Supabase client
@@ -58,20 +59,41 @@ src/
 │       └── middleware.ts     # Session refresh + auth redirect
 └── middleware.ts             # Entry point for Supabase middleware
 supabase/
-└── migrations/001_initial.sql  # Schema: cards, benefits, usage_logs + RLS policies
+└── migrations/
+    ├── 001_initial.sql          # Schema: cards, benefits, usage_logs + RLS policies
+    └── 002_template_binding.sql # template_key, benefit_key, source, cycle_start_date + backfill
 ```
 
 ## Data model
 
-- **cards** — `id`, `user_id`, `name`, `issuer`, `annual_fee`, `color`
-- **benefits** — `id`, `card_id`, `name`, `description`, `credit_type` (`dollar`|`perk`), `credit_amount`, `period_type` (`monthly`|`quarterly`|`semi_annual`|`annual`|`one_time`), `is_auto_used`, `reminder_enabled`, `reminder_days_before`
-- **usage_logs** — `id`, `benefit_id`, `amount_used`, `period_start` (date, e.g. `2026-05-01`), `notes`
+- **cards** — `id`, `user_id`, `name`, `issuer`, `annual_fee`, `color`, `template_key` (null = custom card)
+- **benefits** — `id`, `card_id`, `name`, `description`, `credit_type` (`dollar`|`perk`), `credit_amount`, `period_type` (`monthly`|`quarterly`|`semi_annual`|`annual`|`one_time`), `is_auto_used`, `reminder_enabled`, `reminder_days_before`, `benefit_key` (stable key tying a template benefit to its definition), `source` (`template`|`custom`), `cycle_start_date` (per-user anniversary anchor for annual benefits; null = calendar year)
+- **usage_logs** — `id`, `benefit_id`, `amount_used`, `period_start` (date; first of the period, or the anniversary day for anchored annual cycles), `notes`
 
 Standard nested query pattern used across all pages:
 
 ```ts
 supabase.from('cards').select('*, benefits (*, usage_logs (*))')
 ```
+
+### Template binding & sync
+
+Benefits on template cards are **bound to the template definitions in code** (`src/lib/card-templates.ts`).
+Definition fields (name, description, credit_type, credit_amount, period_type) belong to the template;
+user-owned fields (`is_auto_used`, `reminder_*`, `cycle_start_date`) live on the per-user benefit row and
+are never overwritten. `syncCardsWithTemplates()` (`src/lib/template-sync.ts`) runs on dashboard load: it
+inserts template benefits added in code and updates drifted definition fields, matched by `benefit_key`
+(`benefitKey(b)` = `b.key` or `slug(b.name)`). `usage_logs` are keyed by `benefit_id` and never touched, so
+history survives definition changes. Template benefits are **read-only in the UI** (no edit/delete); only
+`source='custom'` benefits are user-editable. Each `CardTemplate` also has `key` and `reward_categories`
+(shown on the dashboard tile via `rewardCategoriesForCard`); a benefit may set an explicit `key` to keep its
+binding stable across a rename. The SQL slug in `002_template_binding.sql` mirrors `slug()` in code.
+
+### Period math
+
+`src/lib/periods.ts` functions take an optional `anchor` (a benefit's `cycle_start_date`). For annual
+benefits with an anchor, the period is a rolling 12-month window starting on the anchor's month/day instead
+of Jan 1–Dec 31. Always pass `benefit.cycle_start_date` when computing a benefit's period.
 
 ## Key conventions
 

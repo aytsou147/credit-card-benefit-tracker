@@ -6,7 +6,31 @@ export interface PeriodBoundary {
   label: string;
 }
 
-export function getPeriodBoundaries(periodType: PeriodType, date: Date): PeriodBoundary {
+/** Anchor for annual benefits that reset on a card anniversary instead of the
+ *  calendar year. A date string (YYYY-MM-DD); only its month/day are used. */
+export type CycleAnchor = string | null | undefined;
+
+function monthYearLabel(date: Date): string {
+  return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+}
+
+/** 12-month window that contains `date`, starting on the anchor's month/day. */
+function anniversaryBoundary(date: Date, anchor: string): PeriodBoundary {
+  const a = new Date(anchor + 'T00:00:00');
+  const m = a.getMonth();
+  const d = a.getDate();
+
+  let startYear = date.getFullYear();
+  if (date < new Date(startYear, m, d)) startYear -= 1;
+
+  const start = new Date(startYear, m, d);
+  const end = new Date(startYear + 1, m, d);
+  end.setDate(end.getDate() - 1); // day before the next anniversary
+
+  return { start, end, label: `${monthYearLabel(start)} – ${monthYearLabel(end)}` };
+}
+
+export function getPeriodBoundaries(periodType: PeriodType, date: Date, anchor?: CycleAnchor): PeriodBoundary {
   const year = date.getFullYear();
   const month = date.getMonth();
 
@@ -38,6 +62,7 @@ export function getPeriodBoundaries(periodType: PeriodType, date: Date): PeriodB
       };
     }
     case 'annual': {
+      if (anchor) return anniversaryBoundary(date, anchor);
       return {
         start: new Date(year, 0, 1),
         end: new Date(year, 11, 31),
@@ -54,11 +79,11 @@ export function getPeriodBoundaries(periodType: PeriodType, date: Date): PeriodB
   }
 }
 
-export function getCurrentPeriod(periodType: PeriodType): PeriodBoundary {
-  return getPeriodBoundaries(periodType, new Date());
+export function getCurrentPeriod(periodType: PeriodType, anchor?: CycleAnchor): PeriodBoundary {
+  return getPeriodBoundaries(periodType, new Date(), anchor);
 }
 
-export function getAllPeriodsForYear(periodType: PeriodType, year: number): PeriodBoundary[] {
+export function getAllPeriodsForYear(periodType: PeriodType, year: number, anchor?: CycleAnchor): PeriodBoundary[] {
   switch (periodType) {
     case 'monthly':
       return Array.from({ length: 12 }, (_, i) =>
@@ -73,19 +98,28 @@ export function getAllPeriodsForYear(periodType: PeriodType, year: number): Peri
         getPeriodBoundaries('semi_annual', new Date(year, 0, 1)),
         getPeriodBoundaries('semi_annual', new Date(year, 6, 1)),
       ];
-    case 'annual':
+    case 'annual': {
+      if (anchor) {
+        const a = new Date(anchor + 'T00:00:00');
+        // The anniversary cycle that begins in `year`.
+        return [getPeriodBoundaries('annual', new Date(year, a.getMonth(), a.getDate()), anchor)];
+      }
       return [getPeriodBoundaries('annual', new Date(year, 0, 1))];
+    }
     case 'one_time':
       return [getPeriodBoundaries('one_time', new Date(year, 0, 1))];
   }
 }
 
 export function periodStartKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-export function daysUntilPeriodEnd(periodType: PeriodType): number {
-  const { end } = getCurrentPeriod(periodType);
+export function daysUntilPeriodEnd(periodType: PeriodType, anchor?: CycleAnchor): number {
+  const { end } = getCurrentPeriod(periodType, anchor);
   const now = new Date();
   const diff = end.getTime() - now.getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));

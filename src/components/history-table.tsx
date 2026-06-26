@@ -40,7 +40,7 @@ export function HistoryTable({ cards, year, editMode, onCellClick }: HistoryTabl
 
         for (const benefit of card.benefits) {
           if (benefit.credit_type !== 'dollar') continue;
-          const periods = getAllPeriodsForYear(benefit.period_type, year);
+          const periods = getAllPeriodsForYear(benefit.period_type, year, benefit.cycle_start_date);
           for (const p of periods) {
             cardTotalAvailable += benefit.credit_amount;
             const used = benefit.is_auto_used && p.start <= now
@@ -87,7 +87,7 @@ export function HistoryTable({ cards, year, editMode, onCellClick }: HistoryTabl
               <CardContent className="pt-0">
                 <div className="space-y-3">
                   {card.benefits.map((benefit) => {
-                    const periods = getAllPeriodsForYear(benefit.period_type, year);
+                    const periods = getAllPeriodsForYear(benefit.period_type, year, benefit.cycle_start_date);
                     const isDollar = benefit.credit_type === 'dollar';
 
                     let benefitTotal = 0;

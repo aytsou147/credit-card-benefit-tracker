@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CardWithBenefits, BenefitWithUsage, CreditType, PeriodType } from '@/lib/types';
+import { CardWithBenefits, BenefitWithUsage, UsageLog } from '@/lib/types';
 import { BenefitRow } from '@/components/benefit-row';
 import { LogUsageDialog } from '@/components/log-usage-dialog';
-import { AddBenefitDialog } from '@/components/add-benefit-dialog';
+import { AddBenefitDialog, BenefitFields } from '@/components/add-benefit-dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +23,9 @@ export default function CardDetailPage() {
   const [loading, setLoading] = useState(true);
   const [logBenefit, setLogBenefit] = useState<BenefitWithUsage | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState<UsageLog | null>(null);
+  const [editBenefit, setEditBenefit] = useState<BenefitWithUsage | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchCard = useCallback(async () => {
     const { data, error } = await supabase
@@ -66,6 +69,62 @@ export default function CardDetailPage() {
     }
   }
 
+  async function handleUpdateUsage(logId: string, amount: number, periodStart: string, notes: string) {
+    const { error } = await supabase
+      .from('usage_logs')
+      .update({ amount_used: amount, period_start: periodStart, notes: notes || null })
+      .eq('id', logId);
+    if (error) {
+      toast.error('Failed to update usage');
+    } else {
+      toast.success('Usage updated');
+      fetchCard();
+    }
+  }
+
+  async function handleDeleteUsage(logId: string) {
+    const { error } = await supabase.from('usage_logs').delete().eq('id', logId);
+    if (error) {
+      toast.error('Failed to delete usage');
+    } else {
+      toast.success('Usage entry deleted');
+      fetchCard();
+    }
+  }
+
+  async function handleUpdateBenefit(benefitId: string, b: BenefitFields) {
+    const { error } = await supabase
+      .from('benefits')
+      .update({
+        name: b.name,
+        description: b.description || null,
+        credit_type: b.credit_type,
+        credit_amount: b.credit_amount,
+        period_type: b.period_type,
+        is_auto_used: b.is_auto_used,
+        cycle_start_date: b.cycle_start_date,
+      })
+      .eq('id', benefitId);
+    if (error) {
+      toast.error('Failed to update benefit');
+    } else {
+      toast.success('Benefit updated');
+      fetchCard();
+    }
+  }
+
+  async function handleSetCycleDate(benefitId: string, date: string | null) {
+    const { error } = await supabase
+      .from('benefits')
+      .update({ cycle_start_date: date })
+      .eq('id', benefitId);
+    if (error) {
+      toast.error('Failed to update anniversary date');
+    } else {
+      fetchCard();
+    }
+  }
+
   async function handleToggleAutoUsed(benefitId: string, value: boolean) {
     const { error } = await supabase
       .from('benefits')
@@ -100,18 +159,17 @@ export default function CardDetailPage() {
     }
   }
 
-  async function handleAddBenefit(b: {
-    name: string;
-    description: string;
-    credit_type: CreditType;
-    credit_amount: number;
-    period_type: PeriodType;
-    is_auto_used: boolean;
-  }) {
+  async function handleAddBenefit(b: BenefitFields) {
     const { error } = await supabase.from('benefits').insert({
       card_id: cardId,
-      ...b,
+      name: b.name,
       description: b.description || null,
+      credit_type: b.credit_type,
+      credit_amount: b.credit_amount,
+      period_type: b.period_type,
+      is_auto_used: b.is_auto_used,
+      cycle_start_date: b.cycle_start_date,
+      source: 'custom',
     });
     if (error) {
       toast.error('Failed to add benefit');
@@ -186,11 +244,23 @@ export default function CardDetailPage() {
               benefit={benefit}
               onLogUsage={(b) => {
                 setLogBenefit(b);
+                setEditingLog(null);
                 setLogOpen(true);
               }}
               onToggleAutoUsed={handleToggleAutoUsed}
               onToggleReminder={handleToggleReminder}
               onDelete={handleDeleteBenefit}
+              onEdit={(b) => {
+                setEditBenefit(b);
+                setEditOpen(true);
+              }}
+              onSetCycleDate={handleSetCycleDate}
+              onEditUsage={(b, log) => {
+                setLogBenefit(b);
+                setEditingLog(log);
+                setLogOpen(true);
+              }}
+              onDeleteUsage={handleDeleteUsage}
             />
           ))}
         </div>
@@ -201,6 +271,16 @@ export default function CardDetailPage() {
         open={logOpen}
         onOpenChange={setLogOpen}
         onSubmit={handleLogUsage}
+        editingLog={editingLog}
+        onUpdate={handleUpdateUsage}
+      />
+
+      <AddBenefitDialog
+        onAdd={handleAddBenefit}
+        benefit={editBenefit}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSave={handleUpdateBenefit}
       />
     </div>
   );

@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { CardWithBenefits } from '@/lib/types';
-import { CardTemplate } from '@/lib/card-templates';
+import { CardTemplate, benefitKey } from '@/lib/card-templates';
+import { syncCardsWithTemplates } from '@/lib/template-sync';
 import { CardTile } from '@/components/card-tile';
 import { AddCardDialog } from '@/components/add-card-dialog';
 import { ReminderBadges } from '@/components/reminder-badge';
@@ -17,22 +18,35 @@ export default function DashboardPage() {
   const supabase = supabaseRef.current;
 
   const fetchCards = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('cards')
-      .select(`
-        *,
-        benefits (
+    const query = () =>
+      supabase
+        .from('cards')
+        .select(`
           *,
-          usage_logs (*)
-        )
-      `)
-      .order('created_at', { ascending: true });
+          benefits (
+            *,
+            usage_logs (*)
+          )
+        `)
+        .order('created_at', { ascending: true });
+
+    const { data, error } = await query();
 
     if (error) {
       toast.error('Failed to load cards');
       console.error(error);
+      setLoading(false);
+      return;
+    }
+
+    const fetched = (data ?? []) as CardWithBenefits[];
+    // Reconcile template-backed benefits with the latest template definitions.
+    const changed = await syncCardsWithTemplates(supabase, fetched);
+    if (changed) {
+      const { data: synced } = await query();
+      setCards((synced ?? fetched) as CardWithBenefits[]);
     } else {
-      setCards(data as CardWithBenefits[]);
+      setCards(fetched);
     }
     setLoading(false);
   }, [supabase]);
@@ -53,6 +67,7 @@ export default function DashboardPage() {
         issuer: template.issuer,
         annual_fee: template.annual_fee,
         color: template.color,
+        template_key: template.key,
       })
       .select()
       .single();
@@ -70,6 +85,8 @@ export default function DashboardPage() {
       credit_amount: b.credit_amount,
       period_type: b.period_type,
       is_auto_used: b.is_auto_used,
+      benefit_key: benefitKey(b),
+      source: 'template',
     }));
 
     const { error: benefitError } = await supabase.from('benefits').insert(benefitRows);

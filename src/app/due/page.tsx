@@ -110,11 +110,11 @@ export default function DuePage() {
     card.benefits
       .filter((b) => {
         if (b.period_type === 'one_time') return false;
-        const period = getCurrentPeriod(b.period_type);
+        const period = getCurrentPeriod(b.period_type, b.cycle_start_date);
         return periodEndsWithinWindow(period.end, viewPeriod);
       })
       .map((b) => {
-        const period = getCurrentPeriod(b.period_type);
+        const period = getCurrentPeriod(b.period_type, b.cycle_start_date);
         const used = b.is_auto_used
           ? b.credit_amount
           : getUsageForPeriod(b.usage_logs, period.start);
@@ -125,7 +125,7 @@ export default function DuePage() {
           cardName: card.name,
           cardColor: card.color,
           isFullyUsed,
-          daysLeft: daysUntilPeriodEnd(b.period_type),
+          daysLeft: daysUntilPeriodEnd(b.period_type, b.cycle_start_date),
         };
       })
   );

@@ -7,22 +7,54 @@ export interface BenefitTemplate {
   credit_amount: number;
   period_type: PeriodType;
   is_auto_used: boolean;
+  // Optional stable key. Defaults to slug(name). Set explicitly only when
+  // renaming a benefit, so existing usage stays bound to the same key.
+  key?: string;
 }
 
 export interface CardTemplate {
+  // Stable identifier stored on cards.template_key. Never change it.
+  key: string;
   name: string;
   issuer: string;
   annual_fee: number;
   color: string;
+  // Point-earning categories shown on the dashboard tile, one per line,
+  // e.g. ['5X on Airlines', '3X on Restaurants and Travel', '1X on everything else'].
+  reward_categories: string[];
   benefits: BenefitTemplate[];
+}
+
+/** Slug used to derive a benefit's stable key from its name. Mirrors the SQL
+ *  backfill in migration 002 (lower-case, non-alphanumeric runs -> '_', trimmed). */
+export function slug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+export function benefitKey(b: BenefitTemplate): string {
+  return b.key ?? slug(b.name);
+}
+
+export function getTemplate(templateKey: string | null | undefined): CardTemplate | undefined {
+  return templateKey ? CARD_TEMPLATES.find((t) => t.key === templateKey) : undefined;
+}
+
+export function rewardCategoriesForCard(card: { template_key: string | null }): string[] {
+  return getTemplate(card.template_key)?.reward_categories ?? [];
 }
 
 export const CARD_TEMPLATES: CardTemplate[] = [
   {
+    key: 'amex_platinum',
     name: 'Amex Platinum',
     issuer: 'American Express',
     annual_fee: 895,
     color: '#8B8B8B',
+    reward_categories: [
+      '5X on Amex Travel',
+      '5X on Flights',
+      '1X on everything else',
+    ],
     benefits: [
       { name: 'Fine Hotels & Resorts', description: '$300/half year', credit_type: 'dollar', credit_amount: 300, period_type: 'semi_annual', is_auto_used: false },
       { name: 'Resy Restaurants', description: '$100/quarter', credit_type: 'dollar', credit_amount: 100, period_type: 'quarterly', is_auto_used: false },
@@ -40,10 +72,18 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     ],
   },
   {
+    key: 'amex_gold',
     name: 'Amex Gold',
     issuer: 'American Express',
     annual_fee: 325,
     color: '#D4AF37',
+    reward_categories: [
+      '5X on Amex Travel',
+      '4X on Dining',
+      '4X on Groceries',
+      '3X on Flights',
+      '1X on everything else',
+    ],
     benefits: [
       { name: 'Uber and UberEats', description: '$10/month', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
       { name: 'Dunkin Credit', description: '$7/month', credit_type: 'dollar', credit_amount: 7, period_type: 'monthly', is_auto_used: false },
@@ -53,10 +93,18 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     ],
   },
   {
+    key: 'amex_hilton_aspire',
     name: 'Amex Hilton Aspire',
     issuer: 'American Express',
     annual_fee: 550,
     color: '#003B5C',
+    reward_categories: [
+      '14X on Hilton Hotels',
+      '7X on Flights',
+      '7X on Car Rentals',
+      '7X on Dining',
+      '3X on everything else',
+    ],
     benefits: [
       { name: 'Flight Credit', description: '$50/quarter', credit_type: 'dollar', credit_amount: 50, period_type: 'quarterly', is_auto_used: false },
       { name: 'Free Night', description: 'One free night per year', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
@@ -64,40 +112,77 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     ],
   },
   {
+    key: 'world_of_hyatt',
     name: 'World of Hyatt',
     issuer: 'Chase',
     annual_fee: 95,
     color: '#1A1F71',
+    reward_categories: [
+      '9X on Hyatt Stays',
+      '4X on Hyatt Experiences',
+      '2X on Dining',
+      '2X on Airfare',
+      '2X on Local Transit',
+      '2X on Fitness Clubs',
+      '1X on everything else',
+    ],
     benefits: [
       { name: 'Free Night', description: 'One free Category 4 night per year', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
       { name: 'Additional Free Night', description: 'Requires $15K spend, Category 4 or below', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
     ],
   },
   {
+    key: 'atmos_rewards_summit',
     name: 'Atmos Rewards Summit',
     issuer: 'Bank of America',
     annual_fee: 395,
     color: '#2E7D32',
+    reward_categories: [
+      '3X on Alaska / Hawaiian Airlines',
+      '3X on Dining',
+      '3X on Foreign Transactions',
+      '1X on everything else',
+    ],
     benefits: [
       { name: 'Global Companion Award (25K)', description: 'Must be used for a second person on same flight', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
       { name: 'Global Companion Award (100K)', description: 'Requires $60K spend', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
     ],
   },
   {
+    key: 'chase_sapphire_preferred',
     name: 'Chase Sapphire Preferred',
     issuer: 'Chase',
     annual_fee: 95,
     color: '#0D47A1',
+    reward_categories: [
+      '5X on Chase Travel',
+      '3X on Dining',
+      '3X on Gas & EV Charging',
+      '3X on Vacation Homes',
+      '3X on Online Groceries',
+      '3X on Streaming',
+      '2X on Travel',
+      '1X on everything else',
+    ],
     benefits: [
-      { name: 'Hotel Credit', description: '$50/year in Chase Travel', credit_type: 'dollar', credit_amount: 50, period_type: 'annual', is_auto_used: false },
+      { name: 'Hotel Credit', description: '$100/year in Chase Travel', credit_type: 'dollar', credit_amount: 100, period_type: 'annual', is_auto_used: false },
       { name: 'DoorDash', description: '$10 x2 non-restaurant + $5 restaurant per month', credit_type: 'dollar', credit_amount: 25, period_type: 'monthly', is_auto_used: false },
+      { name: 'Global Entry / TSA PreCheck / Nexus', description: 'Resets every 4 years', credit_type: 'dollar', credit_amount: 120, period_type: 'annual', is_auto_used: false },
     ],
   },
   {
+    key: 'chase_sapphire_reserve',
     name: 'Chase Sapphire Reserve',
     issuer: 'Chase',
     annual_fee: 550,
     color: '#1A237E',
+    reward_categories: [
+      '8X on Chase Travel',
+      '4X on Flights & Hotels',
+      '3X on Dining',
+      '5X on Lyft',
+      '1X on everything else',
+    ],
     benefits: [
       { name: 'The Edit', description: '$500/year, 2 x $250 credits, min 2-night stay via Chase Travel', credit_type: 'dollar', credit_amount: 500, period_type: 'annual', is_auto_used: false },
       { name: 'Chase Travel Partner Hotel', description: '$250/years, min 2-night stay via Chase Travel at IHG, Montages, Pendry, Omni, Virgin, Minor, and Pan Pacific', credit_type: 'dollar', credit_amount: 250, period_type: 'annual', is_auto_used: false },
