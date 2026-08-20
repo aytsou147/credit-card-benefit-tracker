@@ -8,6 +8,7 @@ https://credit-card-benefit-tracker-seven.vercel.app
 
 ## Features
 
+- Sign in with Google or email/password
 - Add credit cards from pre-built templates (Amex Platinum, Gold, Hilton Aspire, Chase Sapphire Reserve/Preferred, Chase Hyatt, Atmos Summit) or create custom cards
 - **Template-bound benefits** — template cards' benefits stay tied to the template definitions in code. Adding a benefit or changing a credit amount in a template automatically syncs to every card already using it on next load, without disturbing your logged usage
 - Track dollar credits and perks (free nights, companion awards, etc.)
@@ -43,9 +44,29 @@ In the Supabase SQL Editor, run the migrations in `supabase/migrations/` in orde
 cp .env.example .env.local
 ```
 
-Fill in your Supabase project URL and anon key from **Settings > API** in the Supabase dashboard.
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` — from **Settings > API** in the Supabase dashboard.
+- `NEXT_PUBLIC_SITE_URL` — the public origin of this deployment (`http://localhost:3000` locally, your deployed HTTPS URL in production). Every auth redirect is built from this, so a wrong value sends confirmation emails to the wrong host.
 
-### 4. Install and run
+### 4. Configure auth URLs
+
+In **Authentication > URL Configuration**:
+
+- **Site URL** — your production URL (e.g. `https://your-app.vercel.app`). Supabase falls back to this whenever a requested redirect isn't allow-listed, so leaving it as `http://localhost:3000` breaks email links for real users.
+- **Redirect URLs** — add `http://localhost:3000/**` and `https://your-app.vercel.app/**` (plus your Vercel preview pattern if you use previews).
+
+In **Authentication > Email Templates > Confirm signup**, point the link at the token-hash route so confirmation works from any device:
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>
+```
+
+### 5. Enable Google sign-in (optional)
+
+1. In the [Google Cloud Console](https://console.cloud.google.com), configure the OAuth consent screen and create an **OAuth 2.0 Client ID** of type *Web application*.
+2. Set the authorized JavaScript origin to `https://<project-ref>.supabase.co` and the authorized redirect URI to `https://<project-ref>.supabase.co/auth/v1/callback`.
+3. In Supabase, go to **Authentication > Providers > Google**, enable it, and paste the Client ID and Client Secret.
+
+### 6. Install and run
 
 ```bash
 npm install
@@ -60,5 +81,6 @@ Deploy to Vercel:
 
 1. Push this repo to GitHub
 2. Import into Vercel
-3. Add the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` environment variables
+3. Add the `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` environment variables
 4. Deploy
+5. Make sure the deployed URL is set as the Supabase **Site URL** and appears in **Redirect URLs** (step 4 above)

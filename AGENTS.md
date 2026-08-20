@@ -15,7 +15,8 @@ npm run build    # production build
 npm run lint     # ESLint
 ```
 
-Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+`NEXT_PUBLIC_SITE_URL` (see `.env.example`).
 
 ## Tech stack
 
@@ -34,8 +35,10 @@ src/
 │   ├── due/page.tsx          # Due page — cross-card benefit deadlines with period filter
 │   ├── card/[id]/page.tsx    # Card detail — benefit list, log usage, add/delete benefits
 │   ├── history/page.tsx      # Year-over-year usage history
-│   ├── login/page.tsx        # Email/password auth
-│   └── auth/callback/route.ts
+│   ├── login/page.tsx        # Google OAuth + email/password auth
+│   └── auth/
+│       ├── callback/route.ts # PKCE `?code=` exchange (Google OAuth returns here)
+│       └── confirm/route.ts  # `?token_hash=` verifyOtp (email confirmation links)
 ├── components/
 │   ├── ui/                   # shadcn primitives (Button, Badge, Dialog, Select, etc.)
 │   ├── nav.tsx               # Top nav bar with route links
@@ -52,12 +55,13 @@ src/
 │   ├── periods.ts            # Period math: boundaries, labels, usage lookups (anchor-aware)
 │   ├── card-templates.ts     # Pre-built card templates (keys, reward categories, helpers)
 │   ├── template-sync.ts      # Reconcile template-bound benefit rows with template code
+│   ├── site-url.ts           # Public origin + redirect helpers for auth
 │   ├── utils.ts              # cn() utility
 │   └── supabase/
 │       ├── client.ts         # Browser Supabase client
 │       ├── server.ts         # Server Supabase client (cookies)
-│       └── middleware.ts     # Session refresh + auth redirect
-└── middleware.ts             # Entry point for Supabase middleware
+│       └── proxy.ts          # Session refresh + auth redirect
+└── proxy.ts                  # Proxy entry point (Next 16 name for middleware)
 supabase/
 └── migrations/
     ├── 001_initial.sql          # Schema: cards, benefits, usage_logs + RLS policies
@@ -94,6 +98,23 @@ binding stable across a rename. The SQL slug in `002_template_binding.sql` mirro
 `src/lib/periods.ts` functions take an optional `anchor` (a benefit's `cycle_start_date`). For annual
 benefits with an anchor, the period is a rolling 12-month window starting on the anchor's month/day instead
 of Jan 1–Dec 31. Always pass `benefit.cycle_start_date` when computing a benefit's period.
+
+## Auth
+
+Two callback routes, split by flow:
+
+- **`/auth/callback`** — PKCE `?code=` exchange (`exchangeCodeForSession`). Used by Google OAuth. Requires
+  the code-verifier cookie from the browser that started the flow, which is fine for OAuth (same browser).
+- **`/auth/confirm`** — `?token_hash=&type=` (`verifyOtp`). Used by email links. Carries no verifier, so
+  confirming from a different device works. The Supabase **Confirm signup** email template must point here.
+
+Never build an auth redirect from `window.location.origin` or `new URL(request.url).origin` — the first
+breaks on preview deploys, the second yields Vercel's internal origin. Use `getSiteURL()` (client) or
+`getRequestOrigin(request.headers)` (route handlers) from `src/lib/site-url.ts`, and pass any `next`
+destination through `safeNext()` to block open redirects.
+
+Supabase silently ignores a `redirect_to` that isn't on the project's **Redirect URLs** allow-list and
+falls back to the **Site URL**, so dashboard config is part of any auth change (see README setup).
 
 ## Key conventions
 
