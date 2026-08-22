@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, Zap, Bell, BellOff, Check, PlusCircle, Pencil } from 'lucide-react';
+import { Trash2, Zap, Bell, BellOff, Check, PlusCircle, Pencil, Lock, LockOpen } from 'lucide-react';
 import { BenefitWithUsage, UsageLog } from '@/lib/types';
 import {
   getCurrentPeriod,
@@ -30,6 +30,7 @@ interface BenefitRowProps {
   benefit: BenefitWithUsage;
   onLogUsage: (benefit: BenefitWithUsage) => void;
   onToggleAutoUsed: (benefitId: string, value: boolean) => void;
+  onToggleLocked: (benefitId: string, value: boolean) => void;
   onToggleReminder: (benefitId: string, enabled: boolean) => void;
   onDelete: (benefitId: string) => void;
   onEdit?: (benefit: BenefitWithUsage) => void;
@@ -42,6 +43,7 @@ export function BenefitRow({
   benefit,
   onLogUsage,
   onToggleAutoUsed,
+  onToggleLocked,
   onToggleReminder,
   onDelete,
   onEdit,
@@ -84,6 +86,11 @@ export function BenefitRow({
             {benefit.is_auto_used && (
               <Badge variant="secondary" className="text-xs gap-1 shrink-0">
                 <Zap className="h-3 w-3" /> Auto
+              </Badge>
+            )}
+            {benefit.is_locked && (
+              <Badge variant="secondary" className="text-xs gap-1 shrink-0">
+                <Lock className="h-3 w-3" /> Locked
               </Badge>
             )}
             {isFullyUsed && (
@@ -209,6 +216,19 @@ export function BenefitRow({
           />
           <span className="text-muted-foreground">Auto-used</span>
         </label>
+        <button
+          type="button"
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => onToggleLocked(benefit.id, !benefit.is_locked)}
+          title="Locked benefits are hidden from the Due page, card totals, and reminders"
+        >
+          {benefit.is_locked ? (
+            <Lock className="h-4 w-4 text-amber-500" />
+          ) : (
+            <LockOpen className="h-4 w-4" />
+          )}
+          <span>{benefit.is_locked ? 'Locked' : 'Available'}</span>
+        </button>
         <button
           type="button"
           className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"

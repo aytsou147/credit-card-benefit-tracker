@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Check, PlusCircle, Zap } from 'lucide-react';
+import { Check, PlusCircle, Zap, Lock, LockOpen } from 'lucide-react';
 import { BenefitWithUsage } from '@/lib/types';
 import {
   getCurrentPeriod,
@@ -17,9 +17,16 @@ interface DueBenefitRowProps {
   cardName: string;
   cardColor: string;
   onLogUsage: (benefit: BenefitWithUsage) => void;
+  onToggleLocked?: (benefitId: string, value: boolean) => void;
 }
 
-export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueBenefitRowProps) {
+export function DueBenefitRow({
+  benefit,
+  cardName,
+  cardColor,
+  onLogUsage,
+  onToggleLocked,
+}: DueBenefitRowProps) {
   const anchor = benefit.cycle_start_date;
   const period = getCurrentPeriod(benefit.period_type, anchor);
   const used = benefit.is_auto_used
@@ -36,7 +43,11 @@ export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueB
   const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type, anchor) : null;
 
   return (
-    <div className={`rounded-lg border p-4 transition-colors ${isFullyUsed ? 'opacity-60' : ''}`}>
+    <div
+      className={`rounded-lg border p-4 transition-colors ${
+        isFullyUsed || benefit.is_locked ? 'opacity-60' : ''
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -55,6 +66,11 @@ export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueB
             {benefit.is_auto_used && (
               <Badge variant="secondary" className="text-xs gap-1 shrink-0">
                 <Zap className="h-3 w-3" /> Auto
+              </Badge>
+            )}
+            {benefit.is_locked && (
+              <Badge variant="secondary" className="text-xs gap-1 shrink-0">
+                <Lock className="h-3 w-3" /> Locked
               </Badge>
             )}
             {isFullyUsed && (
@@ -82,16 +98,43 @@ export function DueBenefitRow({ benefit, cardName, cardColor, onLogUsage }: DueB
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0">
-          {!benefit.is_auto_used && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => onLogUsage(benefit)}
-            >
-              <PlusCircle className="h-4 w-4" />
-              Log
-            </Button>
+          {benefit.is_locked ? (
+            onToggleLocked && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => onToggleLocked(benefit.id, false)}
+              >
+                <LockOpen className="h-4 w-4" />
+                Unlock
+              </Button>
+            )
+          ) : (
+            <div className="flex items-center gap-1">
+              {!benefit.is_auto_used && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => onLogUsage(benefit)}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Log
+                </Button>
+              )}
+              {onToggleLocked && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onToggleLocked(benefit.id, true)}
+                  title="Lock — hide until a condition is met"
+                >
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
           )}
           {daysLeft !== null && (
             <span className="text-xs text-muted-foreground whitespace-nowrap">

@@ -30,6 +30,7 @@ export interface BenefitFields {
   credit_amount: number;
   period_type: PeriodType;
   is_auto_used: boolean;
+  is_locked: boolean;
   cycle_start_date: string | null;
 }
 
@@ -54,6 +55,7 @@ export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange,
   const [amount, setAmount] = useState('');
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
   const [isAutoUsed, setIsAutoUsed] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [cycleStartDate, setCycleStartDate] = useState('');
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -66,6 +68,7 @@ export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange,
       setAmount(benefit.credit_amount ? String(benefit.credit_amount) : '');
       setPeriodType(benefit.period_type);
       setIsAutoUsed(benefit.is_auto_used);
+      setIsLocked(benefit.is_locked);
       setCycleStartDate(benefit.cycle_start_date ?? '');
     }
   }, [isEdit, open, benefit]);
@@ -80,6 +83,7 @@ export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange,
       credit_amount: creditType === 'dollar' ? parseFloat(amount) || 0 : 0,
       period_type: periodType,
       is_auto_used: isAutoUsed,
+      is_locked: isLocked,
       cycle_start_date: periodType === 'annual' ? cycleStartDate || null : null,
     };
 
@@ -93,6 +97,7 @@ export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange,
       setAmount('');
       setPeriodType('monthly');
       setIsAutoUsed(false);
+      setIsLocked(false);
       setCycleStartDate('');
     }
     setOpen(false);
@@ -191,6 +196,10 @@ export function AddBenefitDialog({ onAdd, benefit, open: openProp, onOpenChange,
           <label className="flex items-center gap-2 cursor-pointer">
             <Switch checked={isAutoUsed} onCheckedChange={setIsAutoUsed} />
             <span className="text-sm">Automatically used each period (e.g. subscription)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch checked={isLocked} onCheckedChange={setIsLocked} />
+            <span className="text-sm">Locked — requires a condition first (e.g. $10K spend)</span>
           </label>
           <Button type="submit" className="w-full">{isEdit ? 'Save Changes' : 'Add Benefit'}</Button>
         </form>

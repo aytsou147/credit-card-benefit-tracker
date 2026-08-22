@@ -102,6 +102,7 @@ export default function CardDetailPage() {
         credit_amount: b.credit_amount,
         period_type: b.period_type,
         is_auto_used: b.is_auto_used,
+        is_locked: b.is_locked,
         cycle_start_date: b.cycle_start_date,
       })
       .eq('id', benefitId);
@@ -129,6 +130,18 @@ export default function CardDetailPage() {
     const { error } = await supabase
       .from('benefits')
       .update({ is_auto_used: value })
+      .eq('id', benefitId);
+    if (error) {
+      toast.error('Failed to update');
+    } else {
+      fetchCard();
+    }
+  }
+
+  async function handleToggleLocked(benefitId: string, value: boolean) {
+    const { error } = await supabase
+      .from('benefits')
+      .update({ is_locked: value })
       .eq('id', benefitId);
     if (error) {
       toast.error('Failed to update');
@@ -168,6 +181,7 @@ export default function CardDetailPage() {
       credit_amount: b.credit_amount,
       period_type: b.period_type,
       is_auto_used: b.is_auto_used,
+      is_locked: b.is_locked,
       cycle_start_date: b.cycle_start_date,
       source: 'custom',
     });
@@ -248,6 +262,7 @@ export default function CardDetailPage() {
                 setLogOpen(true);
               }}
               onToggleAutoUsed={handleToggleAutoUsed}
+              onToggleLocked={handleToggleLocked}
               onToggleReminder={handleToggleReminder}
               onDelete={handleDeleteBenefit}
               onEdit={(b) => {

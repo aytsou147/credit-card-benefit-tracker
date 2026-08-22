@@ -65,13 +65,14 @@ src/
 supabase/
 └── migrations/
     ├── 001_initial.sql          # Schema: cards, benefits, usage_logs + RLS policies
-    └── 002_template_binding.sql # template_key, benefit_key, source, cycle_start_date + backfill
+    ├── 002_template_binding.sql # template_key, benefit_key, source, cycle_start_date + backfill
+    └── 003_benefit_lock.sql     # is_locked flag for condition-gated benefits
 ```
 
 ## Data model
 
 - **cards** — `id`, `user_id`, `name`, `issuer`, `annual_fee`, `color`, `template_key` (null = custom card)
-- **benefits** — `id`, `card_id`, `name`, `description`, `credit_type` (`dollar`|`perk`), `credit_amount`, `period_type` (`monthly`|`quarterly`|`semi_annual`|`annual`|`one_time`), `is_auto_used`, `reminder_enabled`, `reminder_days_before`, `benefit_key` (stable key tying a template benefit to its definition), `source` (`template`|`custom`), `cycle_start_date` (per-user anniversary anchor for annual benefits; null = calendar year)
+- **benefits** — `id`, `card_id`, `name`, `description`, `credit_type` (`dollar`|`perk`), `credit_amount`, `period_type` (`monthly`|`quarterly`|`semi_annual`|`annual`|`one_time`), `is_auto_used`, `is_locked` (gated behind an unmet condition — hidden from the Due page, card totals, and reminders), `reminder_enabled`, `reminder_days_before`, `benefit_key` (stable key tying a template benefit to its definition), `source` (`template`|`custom`), `cycle_start_date` (per-user anniversary anchor for annual benefits; null = calendar year)
 - **usage_logs** — `id`, `benefit_id`, `amount_used`, `period_start` (date; first of the period, or the anniversary day for anchored annual cycles), `notes`
 
 Standard nested query pattern used across all pages:
@@ -84,7 +85,7 @@ supabase.from('cards').select('*, benefits (*, usage_logs (*))')
 
 Benefits on template cards are **bound to the template definitions in code** (`src/lib/card-templates.ts`).
 Definition fields (name, description, credit_type, credit_amount, period_type) belong to the template;
-user-owned fields (`is_auto_used`, `reminder_*`, `cycle_start_date`) live on the per-user benefit row and
+user-owned fields (`is_auto_used`, `is_locked`, `reminder_*`, `cycle_start_date`) live on the per-user benefit row and
 are never overwritten. `syncCardsWithTemplates()` (`src/lib/template-sync.ts`) runs on dashboard load: it
 inserts template benefits added in code and updates drifted definition fields, matched by `benefit_key`
 (`benefitKey(b)` = `b.key` or `slug(b.name)`). `usage_logs` are keyed by `benefit_id` and never touched, so

@@ -22,6 +22,9 @@ export interface Benefit {
   credit_amount: number;
   period_type: PeriodType;
   is_auto_used: boolean;
+  // Gated behind an unmet condition (spend threshold, enrollment). Locked benefits
+  // are hidden from the Due page, card totals, and reminders until unlocked.
+  is_locked: boolean;
   reminder_enabled: boolean;
   reminder_days_before: number;
   // Stable key tying this row to its template benefit (null for custom benefits).

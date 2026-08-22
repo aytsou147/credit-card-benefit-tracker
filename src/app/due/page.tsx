@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ViewPeriod = 'month' | 'quarter' | 'half' | 'year';
@@ -63,6 +63,7 @@ export default function DuePage() {
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('month');
   const [logBenefit, setLogBenefit] = useState<BenefitWithUsage | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [showLocked, setShowLocked] = useState(false);
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
@@ -106,7 +107,20 @@ export default function DuePage() {
     }
   }
 
-  const dueBenefits: DueBenefit[] = cards.flatMap((card) =>
+  async function handleToggleLocked(benefitId: string, value: boolean) {
+    const { error } = await supabase
+      .from('benefits')
+      .update({ is_locked: value })
+      .eq('id', benefitId);
+    if (error) {
+      toast.error('Failed to update');
+    } else {
+      toast.success(value ? 'Benefit locked' : 'Benefit unlocked');
+      fetchCards();
+    }
+  }
+
+  const inWindow: DueBenefit[] = cards.flatMap((card) =>
     card.benefits
       .filter((b) => {
         if (b.period_type === 'one_time') return false;
@@ -130,10 +144,13 @@ export default function DuePage() {
       })
   );
 
-  dueBenefits.sort((a, b) => {
+  const byUrgency = (a: DueBenefit, b: DueBenefit) => {
     if (a.isFullyUsed !== b.isFullyUsed) return a.isFullyUsed ? 1 : -1;
     return a.daysLeft - b.daysLeft;
-  });
+  };
+
+  const dueBenefits = inWindow.filter((d) => !d.benefit.is_locked).sort(byUrgency);
+  const lockedBenefits = inWindow.filter((d) => d.benefit.is_locked).sort(byUrgency);
 
   const totalDue = dueBenefits.length;
   const totalUsed = dueBenefits.filter((d) => d.isFullyUsed).length;
@@ -178,7 +195,9 @@ export default function DuePage() {
           <CheckCircle2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h2 className="text-lg font-semibold">Nothing due {periodLabel}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            No benefit periods end {periodLabel}, or you haven&apos;t added any cards yet.
+            {lockedBenefits.length > 0
+              ? 'Every benefit ending this period is locked until its condition is met.'
+              : `No benefit periods end ${periodLabel}, or you haven't added any cards yet.`}
           </p>
         </div>
       ) : (
@@ -193,8 +212,48 @@ export default function DuePage() {
                 setLogBenefit(b);
                 setLogOpen(true);
               }}
+              onToggleLocked={handleToggleLocked}
             />
           ))}
+        </div>
+      )}
+
+      {lockedBenefits.length > 0 && (
+        <div className="mt-6">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setShowLocked((v) => !v)}
+          >
+            {showLocked ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <Lock className="h-4 w-4" />
+            {lockedBenefits.length} locked benefit{lockedBenefits.length !== 1 ? 's' : ''}
+          </button>
+          {showLocked && (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                These require a condition first (e.g. a spend threshold). Unlock one when you
+                qualify and it moves into the list above.
+              </p>
+              {lockedBenefits.map((item) => (
+                <DueBenefitRow
+                  key={item.benefit.id}
+                  benefit={item.benefit}
+                  cardName={item.cardName}
+                  cardColor={item.cardColor}
+                  onLogUsage={(b) => {
+                    setLogBenefit(b);
+                    setLogOpen(true);
+                  }}
+                  onToggleLocked={handleToggleLocked}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

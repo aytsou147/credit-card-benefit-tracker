@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, ChevronRight, Zap, Bell } from 'lucide-react';
+import { Trash2, ChevronRight, Zap, Bell, Lock } from 'lucide-react';
 import { CardWithBenefits } from '@/lib/types';
 import { getCurrentPeriod, getUsageForPeriod } from '@/lib/periods';
 import { rewardCategoriesForCard } from '@/lib/card-templates';
@@ -27,8 +27,10 @@ interface CardTileProps {
 }
 
 export function CardTile({ card, onDelete }: CardTileProps) {
-  const dollarBenefits = card.benefits.filter((b) => b.credit_type === 'dollar');
-  const perkBenefits = card.benefits.filter((b) => b.credit_type === 'perk');
+  const active = card.benefits.filter((b) => !b.is_locked);
+  const dollarBenefits = active.filter((b) => b.credit_type === 'dollar');
+  const perkBenefits = active.filter((b) => b.credit_type === 'perk');
+  const lockedCount = card.benefits.length - active.length;
 
   let totalAvailable = 0;
   let totalUsed = 0;
@@ -42,8 +44,8 @@ export function CardTile({ card, onDelete }: CardTileProps) {
   }
 
   const pct = totalAvailable > 0 ? (totalUsed / totalAvailable) * 100 : 0;
-  const hasReminders = card.benefits.some((b) => b.reminder_enabled);
-  const hasAutoUsed = card.benefits.some((b) => b.is_auto_used);
+  const hasReminders = active.some((b) => b.reminder_enabled);
+  const hasAutoUsed = active.some((b) => b.is_auto_used);
   const rewardCategories = rewardCategoriesForCard(card);
 
   return (
@@ -133,6 +135,11 @@ export function CardTile({ card, onDelete }: CardTileProps) {
             {perkBenefits.length > 0 && (
               <Badge variant="outline" className="text-xs">
                 {perkBenefits.length} perk{perkBenefits.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {lockedCount > 0 && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <Lock className="h-3 w-3" /> {lockedCount} locked
               </Badge>
             )}
           </div>

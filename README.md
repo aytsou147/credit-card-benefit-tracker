@@ -18,6 +18,7 @@ https://credit-card-benefit-tracker-seven.vercel.app
 - See point-earning categories per card on the dashboard
 - **Due page** — see all benefits expiring soon across every card in one list, filterable by month, quarter, half, or year, with inline usage logging
 - Mark recurring benefits as "auto-used" (e.g. subscriptions)
+- **Lockable benefits** — mark a benefit that requires a condition first (e.g. "$200 credit after $10K spend") as locked. Locked benefits are hidden from the Due page behind a collapsible section, left out of the card's credit totals, and skipped by reminders until you unlock them
 - Set reminders for credits expiring soon (visual + browser notifications)
 - View cumulative year-over-year usage history
 - Responsive design for desktop and mobile
@@ -36,7 +37,7 @@ Go to [supabase.com](https://supabase.com) and create a free project.
 
 ### 2. Run the migrations
 
-In the Supabase SQL Editor, run the migrations in `supabase/migrations/` in order: `001_initial.sql`, then `002_template_binding.sql`.
+In the Supabase SQL Editor, run the migrations in `supabase/migrations/` in order: `001_initial.sql`, `002_template_binding.sql`, then `003_benefit_lock.sql`.
 
 ### 3. Configure environment
 
