@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, Zap, Bell, BellOff, Check, PlusCircle, Pencil, Lock, LockOpen } from 'lucide-react';
+import { Trash2, Zap, Bell, BellOff, Check, PlusCircle, Pencil, Lock, LockOpen, Archive } from 'lucide-react';
 import { BenefitWithUsage, UsageLog } from '@/lib/types';
 import {
   getCurrentPeriod,
@@ -28,6 +28,9 @@ import {
 
 interface BenefitRowProps {
   benefit: BenefitWithUsage;
+  // Template benefit the template no longer defines, kept because it has usage
+  // history. Shown as "Retired" and deletable so it can be cleared by hand.
+  isRetired?: boolean;
   onLogUsage: (benefit: BenefitWithUsage) => void;
   onToggleAutoUsed: (benefitId: string, value: boolean) => void;
   onToggleLocked: (benefitId: string, value: boolean) => void;
@@ -41,6 +44,7 @@ interface BenefitRowProps {
 
 export function BenefitRow({
   benefit,
+  isRetired,
   onLogUsage,
   onToggleAutoUsed,
   onToggleLocked,
@@ -67,6 +71,7 @@ export function BenefitRow({
     : used > 0;
   const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type, anchor) : null;
   const isCustom = benefit.source === 'custom';
+  const canDelete = isCustom || isRetired;
 
   const periodLogs = benefit.is_auto_used
     ? []
@@ -91,6 +96,11 @@ export function BenefitRow({
             {benefit.is_locked && (
               <Badge variant="secondary" className="text-xs gap-1 shrink-0">
                 <Lock className="h-3 w-3" /> Locked
+              </Badge>
+            )}
+            {isRetired && (
+              <Badge variant="secondary" className="text-xs gap-1 shrink-0">
+                <Archive className="h-3 w-3" /> Retired
               </Badge>
             )}
             {isFullyUsed && (
@@ -126,7 +136,7 @@ export function BenefitRow({
               <Pencil className="h-4 w-4" />
             </Button>
           )}
-          {isCustom && (
+          {canDelete && (
             <AlertDialog>
               <AlertDialogTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
                 <Trash2 className="h-4 w-4 text-destructive" />

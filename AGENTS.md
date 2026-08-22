@@ -87,12 +87,26 @@ Benefits on template cards are **bound to the template definitions in code** (`s
 Definition fields (name, description, credit_type, credit_amount, period_type) belong to the template;
 user-owned fields (`is_auto_used`, `is_locked`, `reminder_*`, `cycle_start_date`) live on the per-user benefit row and
 are never overwritten. `syncCardsWithTemplates()` (`src/lib/template-sync.ts`) runs on dashboard load: it
-inserts template benefits added in code and updates drifted definition fields, matched by `benefit_key`
-(`benefitKey(b)` = `b.key` or `slug(b.name)`). `usage_logs` are keyed by `benefit_id` and never touched, so
-history survives definition changes. Template benefits are **read-only in the UI** (no edit/delete); only
-`source='custom'` benefits are user-editable. Each `CardTemplate` also has `key` and `reward_categories`
-(shown on the dashboard tile via `rewardCategoriesForCard`); a benefit may set an explicit `key` to keep its
-binding stable across a rename. The SQL slug in `002_template_binding.sql` mirrors `slug()` in code.
+inserts template benefits added in code and updates drifted definition fields, matched by `benefit_key`.
+`usage_logs` are keyed by `benefit_id` and never touched, so history survives definition changes. Template
+benefits are **read-only in the UI** (no edit/delete); only `source='custom'` benefits are user-editable. Each
+`CardTemplate` also has `key` and `reward_categories` (shown on the dashboard tile via
+`rewardCategoriesForCard`). The SQL slug in `002_template_binding.sql` mirrors `slug()` in code.
+
+**Keys are identity; names are display.** Every `BenefitTemplate` and `CardTemplate` declares a required `key`
+that must never change once shipped — use `slug(name)` when adding one. `name` is display-only, so renaming a
+benefit in code renames the existing row in place and keeps its usage history.
+
+If a rename ships *without* keeping the key (or a key is otherwise changed), sync sees an unknown key and
+inserts a second row, splitting the benefit in two. Repair it by restoring the original `key` and listing the
+accidentally created one in `previousKeys`: sync then re-points the duplicate's `usage_logs` onto the canonical
+row and deletes it, or re-keys the row in place on cards that only ever had the new key. `CardTemplate.previousKeys`
+does the same for a renamed card key, rewriting `cards.template_key`. Keep `previousKeys` entries indefinitely —
+any database may still hold the old key.
+
+Template rows whose key matches no template benefit (current or historical) are **retired**: sync deletes them
+if they have no usage, and `retiredBenefitIds()` flags the rest so the card page shows a "Retired" badge and a
+delete button.
 
 ### Period math
 

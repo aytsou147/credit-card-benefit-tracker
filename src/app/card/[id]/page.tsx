@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CardWithBenefits, BenefitWithUsage, UsageLog } from '@/lib/types';
+import { retiredBenefitIds } from '@/lib/template-sync';
 import { BenefitRow } from '@/components/benefit-row';
 import { LogUsageDialog } from '@/components/log-usage-dialog';
 import { AddBenefitDialog, BenefitFields } from '@/components/add-benefit-dialog';
@@ -201,6 +202,7 @@ export default function CardDetailPage() {
     );
   }
 
+  const retired = retiredBenefitIds(card);
   const dollarBenefits = card.benefits.filter((b) => b.credit_type === 'dollar');
   const totalAnnualValue = dollarBenefits.reduce((sum, b) => {
     switch (b.period_type) {
@@ -256,6 +258,7 @@ export default function CardDetailPage() {
             <BenefitRow
               key={benefit.id}
               benefit={benefit}
+              isRetired={retired.has(benefit.id)}
               onLogUsage={(b) => {
                 setLogBenefit(b);
                 setEditingLog(null);
