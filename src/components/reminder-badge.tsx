@@ -24,7 +24,8 @@ export function ReminderBadges({ cards }: ReminderBadgesProps) {
 
   for (const card of cards) {
     for (const benefit of card.benefits) {
-      if (!benefit.reminder_enabled || benefit.is_locked || benefit.period_type === 'one_time') continue;
+      if (!benefit.reminder_enabled || benefit.is_locked || benefit.is_dismissed) continue;
+      if (benefit.period_type === 'one_time') continue;
 
       const daysLeft = daysUntilPeriodEnd(benefit.period_type);
       if (daysLeft > benefit.reminder_days_before) continue;

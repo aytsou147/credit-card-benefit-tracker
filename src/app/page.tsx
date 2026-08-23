@@ -144,7 +144,8 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">Your Cards</h1>
           <p className="text-sm text-muted-foreground">
             {cards.length} card{cards.length !== 1 ? 's' : ''} ·{' '}
-            {cards.reduce((n, c) => n + c.benefits.length, 0)} benefits tracked
+            {cards.reduce((n, c) => n + c.benefits.filter((b) => !b.is_dismissed).length, 0)}{' '}
+            benefits tracked
           </p>
         </div>
         <AddCardDialog onAddTemplate={handleAddTemplate} onAddCustom={handleAddCustom} />

@@ -36,6 +36,9 @@ interface BenefitRowProps {
   onToggleLocked: (benefitId: string, value: boolean) => void;
   onToggleReminder: (benefitId: string, enabled: boolean) => void;
   onDelete: (benefitId: string) => void;
+  // Template benefits still in the template are removed by dismissing, not deleting, so
+  // sync can't re-add them. Absent = the benefit can only be hard-deleted.
+  onDismiss?: (benefitId: string) => void;
   onEdit?: (benefit: BenefitWithUsage) => void;
   onSetCycleDate?: (benefitId: string, date: string | null) => void;
   onEditUsage?: (benefit: BenefitWithUsage, log: UsageLog) => void;
@@ -50,6 +53,7 @@ export function BenefitRow({
   onToggleLocked,
   onToggleReminder,
   onDelete,
+  onDismiss,
   onEdit,
   onSetCycleDate,
   onEditUsage,
@@ -71,7 +75,11 @@ export function BenefitRow({
     : used > 0;
   const daysLeft = benefit.period_type !== 'one_time' ? daysUntilPeriodEnd(benefit.period_type, anchor) : null;
   const isCustom = benefit.source === 'custom';
-  const canDelete = isCustom || isRetired;
+  const canHardDelete = isCustom || !!isRetired;
+  const isDismissable = !canHardDelete && !!onDismiss;
+  const canRemove = canHardDelete || isDismissable;
+  const confirmRemove = () =>
+    isDismissable ? onDismiss?.(benefit.id) : onDelete(benefit.id);
 
   const periodLogs = benefit.is_auto_used
     ? []
@@ -136,22 +144,29 @@ export function BenefitRow({
               <Pencil className="h-4 w-4" />
             </Button>
           )}
-          {canDelete && (
+          {canRemove && (
             <AlertDialog>
-              <AlertDialogTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
+              <AlertDialogTrigger
+                render={<Button variant="ghost" size="icon" className="h-8 w-8" />}
+                title={isDismissable ? 'Remove benefit' : 'Delete benefit'}
+              >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {benefit.name}?</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {isDismissable ? 'Remove' : 'Delete'} {benefit.name}?
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    This removes the benefit and all its usage history.
+                    {isDismissable
+                      ? 'This benefit will be hidden from this card, the Due page, totals, and reminders. Your usage history is kept and you can restore it later.'
+                      : 'This removes the benefit and all its usage history.'}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(benefit.id)}>
-                    Delete
+                  <AlertDialogAction variant="destructive" onClick={confirmRemove}>
+                    {isDismissable ? 'Remove' : 'Delete'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -203,14 +218,38 @@ export function BenefitRow({
                   </button>
                 )}
                 {onDeleteUsage && (
-                  <button
-                    type="button"
-                    className="rounded p-1 text-muted-foreground hover:text-destructive"
-                    onClick={() => onDeleteUsage(log.id)}
-                    title="Delete entry"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          title="Delete entry"
+                        />
+                      }
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this usage entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {isDollar ? `$${Number(log.amount_used).toFixed(2)}` : 'Usage'} logged
+                          on {new Date(log.created_at).toLocaleDateString()} will be removed.
+                          This cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          onClick={() => onDeleteUsage(log.id)}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </div>

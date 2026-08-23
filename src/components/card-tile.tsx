@@ -27,10 +27,11 @@ interface CardTileProps {
 }
 
 export function CardTile({ card, onDelete }: CardTileProps) {
-  const active = card.benefits.filter((b) => !b.is_locked);
+  const tracked = card.benefits.filter((b) => !b.is_dismissed);
+  const active = tracked.filter((b) => !b.is_locked);
   const dollarBenefits = active.filter((b) => b.credit_type === 'dollar');
   const perkBenefits = active.filter((b) => b.credit_type === 'perk');
-  const lockedCount = card.benefits.length - active.length;
+  const lockedCount = tracked.length - active.length;
 
   let totalAvailable = 0;
   let totalUsed = 0;
@@ -74,9 +75,10 @@ export function CardTile({ card, onDelete }: CardTileProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
                 />
               }
+              title="Delete card"
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </AlertDialogTrigger>
@@ -89,7 +91,7 @@ export function CardTile({ card, onDelete }: CardTileProps) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(card.id)}>
+                <AlertDialogAction variant="destructive" onClick={() => onDelete(card.id)}>
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>

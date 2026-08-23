@@ -123,7 +123,7 @@ export default function DuePage() {
   const inWindow: DueBenefit[] = cards.flatMap((card) =>
     card.benefits
       .filter((b) => {
-        if (b.period_type === 'one_time') return false;
+        if (b.is_dismissed || b.period_type === 'one_time') return false;
         const period = getCurrentPeriod(b.period_type, b.cycle_start_date);
         return periodEndsWithinWindow(period.end, viewPeriod);
       })

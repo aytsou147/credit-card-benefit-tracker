@@ -9,7 +9,20 @@ import { BenefitRow } from '@/components/benefit-row';
 import { LogUsageDialog } from '@/components/log-usage-dialog';
 import { AddBenefitDialog, BenefitFields } from '@/components/add-benefit-dialog';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, CreditCard, Trash2, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { periodTypeLabel } from '@/lib/periods';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -27,6 +40,7 @@ export default function CardDetailPage() {
   const [editingLog, setEditingLog] = useState<UsageLog | null>(null);
   const [editBenefit, setEditBenefit] = useState<BenefitWithUsage | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const fetchCard = useCallback(async () => {
     const { data, error } = await supabase
@@ -173,6 +187,31 @@ export default function CardDetailPage() {
     }
   }
 
+  // Template benefits are dismissed rather than deleted: the row is kept so template
+  // sync doesn't re-add the benefit, and its usage history survives a restore.
+  async function setDismissed(benefitId: string, value: boolean) {
+    const { error } = await supabase
+      .from('benefits')
+      .update({ is_dismissed: value })
+      .eq('id', benefitId);
+    if (error) {
+      toast.error('Failed to update');
+    } else {
+      toast.success(value ? 'Benefit removed' : 'Benefit restored');
+      fetchCard();
+    }
+  }
+
+  async function handleDeleteCard() {
+    const { error } = await supabase.from('cards').delete().eq('id', cardId);
+    if (error) {
+      toast.error('Failed to delete card');
+    } else {
+      toast.success('Card deleted');
+      router.push('/');
+    }
+  }
+
   async function handleAddBenefit(b: BenefitFields) {
     const { error } = await supabase.from('benefits').insert({
       card_id: cardId,
@@ -203,7 +242,9 @@ export default function CardDetailPage() {
   }
 
   const retired = retiredBenefitIds(card);
-  const dollarBenefits = card.benefits.filter((b) => b.credit_type === 'dollar');
+  const benefits = card.benefits.filter((b) => !b.is_dismissed);
+  const dismissed = card.benefits.filter((b) => b.is_dismissed);
+  const dollarBenefits = benefits.filter((b) => b.credit_type === 'dollar');
   const totalAnnualValue = dollarBenefits.reduce((sum, b) => {
     switch (b.period_type) {
       case 'monthly': return sum + b.credit_amount * 12;
@@ -229,7 +270,7 @@ export default function CardDetailPage() {
           >
             <CreditCard className="h-7 w-7 text-white" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold">{card.name}</h1>
             <p className="text-sm text-muted-foreground">
               {card.issuer}
@@ -238,23 +279,45 @@ export default function CardDetailPage() {
               ~${totalAnnualValue.toFixed(0)}/yr in benefits
             </p>
           </div>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={<Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" />}
+              title="Delete card"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {card.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the card and all its benefits and usage history.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={handleDeleteCard}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">
-          Benefits ({card.benefits.length})
+          Benefits ({benefits.length})
         </h2>
         <AddBenefitDialog onAdd={handleAddBenefit} />
       </div>
 
-      {card.benefits.length === 0 ? (
+      {benefits.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
           No benefits yet. Add one to start tracking.
         </div>
       ) : (
         <div className="space-y-3">
-          {card.benefits.map((benefit) => (
+          {benefits.map((benefit) => (
             <BenefitRow
               key={benefit.id}
               benefit={benefit}
@@ -268,6 +331,7 @@ export default function CardDetailPage() {
               onToggleLocked={handleToggleLocked}
               onToggleReminder={handleToggleReminder}
               onDelete={handleDeleteBenefit}
+              onDismiss={(id) => setDismissed(id, true)}
               onEdit={(b) => {
                 setEditBenefit(b);
                 setEditOpen(true);
@@ -281,6 +345,49 @@ export default function CardDetailPage() {
               onDeleteUsage={handleDeleteUsage}
             />
           ))}
+        </div>
+      )}
+
+      {dismissed.length > 0 && (
+        <div className="mt-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+            onClick={() => setShowDismissed((v) => !v)}
+          >
+            {showDismissed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            Removed ({dismissed.length})
+          </Button>
+          {showDismissed && (
+            <div className="mt-2 space-y-2">
+              {dismissed.map((benefit) => (
+                <div
+                  key={benefit.id}
+                  className="flex items-center gap-2 rounded-lg border border-dashed px-4 py-2.5"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {benefit.name}
+                  </span>
+                  <Badge variant="outline" className="shrink-0 text-xs">
+                    {periodTypeLabel(benefit.period_type)}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 gap-1.5"
+                    onClick={() => setDismissed(benefit.id, false)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -5,8 +5,10 @@ import { BenefitTemplate, benefitKey, benefitKeyAliases, getTemplate } from './c
 type SupabaseClient = ReturnType<typeof createClient>;
 
 // Fields owned by the template. Sync overwrites these on existing rows; everything
-// else on a benefit row (is_auto_used, is_locked, reminder_*, cycle_start_date) is
-// user-owned and never touched after the row is first inserted.
+// else on a benefit row (is_auto_used, is_locked, is_dismissed, reminder_*,
+// cycle_start_date) is user-owned and never touched after the row is first inserted.
+// A dismissed row is deliberately retained: sync still matches its benefit_key, so the
+// benefit is never re-inserted while the user has it removed.
 const DEFINITION_FIELDS = ['name', 'description', 'credit_type', 'credit_amount', 'period_type'] as const;
 
 function definitionFromTemplate(tb: BenefitTemplate) {

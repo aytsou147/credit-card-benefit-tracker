@@ -34,11 +34,12 @@ export function HistoryTable({ cards, year, editMode, onCellClick }: HistoryTabl
     <div className="space-y-4">
       {cards.map((card) => {
         const isExpanded = expandedCards.has(card.id);
+        const benefits = card.benefits.filter((b) => !b.is_dismissed);
 
         let cardTotalAvailable = 0;
         let cardTotalUsed = 0;
 
-        for (const benefit of card.benefits) {
+        for (const benefit of benefits) {
           if (benefit.credit_type !== 'dollar') continue;
           const periods = getAllPeriodsForYear(benefit.period_type, year, benefit.cycle_start_date);
           for (const p of periods) {
@@ -86,7 +87,7 @@ export function HistoryTable({ cards, year, editMode, onCellClick }: HistoryTabl
             {isExpanded && (
               <CardContent className="pt-0">
                 <div className="space-y-3">
-                  {card.benefits.map((benefit) => {
+                  {benefits.map((benefit) => {
                     const periods = getAllPeriodsForYear(benefit.period_type, year, benefit.cycle_start_date);
                     const isDollar = benefit.credit_type === 'dollar';
 

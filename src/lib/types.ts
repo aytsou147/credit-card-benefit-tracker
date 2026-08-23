@@ -25,6 +25,9 @@ export interface Benefit {
   // Gated behind an unmet condition (spend threshold, enrollment). Locked benefits
   // are hidden from the Due page, card totals, and reminders until unlocked.
   is_locked: boolean;
+  // Removed by the user from a template card. The row is kept so template sync doesn't
+  // re-add the benefit; hidden everywhere until restored.
+  is_dismissed: boolean;
   reminder_enabled: boolean;
   reminder_days_before: number;
   // Stable key tying this row to its template benefit (null for custom benefits).
