@@ -160,10 +160,29 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       '3X on Dining',
       '3X on Foreign Transactions',
       '1X on everything else',
+      '1 status point per $2'
     ],
     benefits: [
       { key: 'global_companion_award_25k', name: 'Global Companion Award (25K)', description: 'Must be used for a second person on same flight', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
       { key: 'global_companion_award_100k', name: 'Global Companion Award (100K)', description: 'Requires $60K spend', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
+    ],
+  },
+  {
+    key: 'atmos_rewards_ascent',
+    name: 'Atmos Rewards Ascent',
+    issuer: 'Bank of America',
+    annual_fee: 395,
+    color: '#6d6cb4',
+    reward_categories: [
+      '3X on Alaska / Hawaiian Airlines',
+      '2X on Gas & EV Charging',
+      '2X on Transit',
+      '2X on Cable and Streaming',
+      '1X on everything else',
+      '1 status point per $3'
+    ],
+    benefits: [
+      { key: 'companion_fare', name: 'Companion Fare', description: '$99 companion fare each account anniversary', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
     ],
   },
   {
@@ -239,6 +258,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
     reward_categories: [
       '3X on Delta',
       '1X on everything else',
+      '$1 MQD per $10'
     ],
     benefits: [
       { key: 'companion_certificate', name: 'Companion Certificate', description: 'Companion on round-trip flight within U.S. and to Mexico, Caribbean, or Central America', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
@@ -246,6 +266,29 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       { key: 'delta_sky_club_access', name: 'Delta Sky Club Access', description: '15 visits each Medallion Year to the Delta Sky Club when flying Delta', credit_type: 'perk', credit_amount: 15, period_type: 'annual', is_auto_used: false },
       { key: 'rideshare', name: 'Rideshare', description: '$10/month on U.S. rideshare purchases', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
       { key: 'delta_stays', name: 'Delta Stays', description: '$200/year on prepaid hotel or vacation rental through Delta Stays', credit_type: 'dollar', credit_amount: 200, period_type: 'annual', is_auto_used: false },
+      { key: 'global_entry_tsa_precheck', name: 'Global Entry / TSA Precheck', description: 'Resets every 4 years, not annually', credit_type: 'dollar', credit_amount: 120, period_type: 'annual', is_auto_used: false },
+    ],
+  },
+  {
+    key: 'delta_sky_miles_platinum',
+    name: 'Delta SkyMiles Platinum',
+    issuer: 'American Express',
+    annual_fee: 350,
+    color: '#7d20a1a8',
+    reward_categories: [
+      '2X on Delta',
+      '3X on Hotels',
+      '2X on Dining',
+      '2X on Groceries',
+      '1X on everything else',
+      '$1 MQD per $20'
+    ],
+    benefits: [
+      { key: 'companion_certificate', name: 'Companion Certificate', description: 'Companion on round-trip flight within U.S. and to Mexico, Caribbean, or Central America', credit_type: 'perk', credit_amount: 0, period_type: 'annual', is_auto_used: false },
+      { key: 'resy_restaurants', name: 'Resy Restaurants', description: '$10/month on eligible Resy restaurants', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
+      { key: 'rideshare', name: 'Rideshare', description: '$10/month on U.S. rideshare purchases', credit_type: 'dollar', credit_amount: 10, period_type: 'monthly', is_auto_used: false },
+      { key: 'delta_stays', name: 'Delta Stays', description: '$150/year on prepaid hotel or vacation rental through Delta Stays', credit_type: 'dollar', credit_amount: 150, period_type: 'annual', is_auto_used: false },
+      { key: 'global_entry_tsa_precheck', name: 'Global Entry / TSA Precheck', description: 'Resets every 4 years, not annually', credit_type: 'dollar', credit_amount: 120, period_type: 'annual', is_auto_used: false },
     ],
   },
   {
